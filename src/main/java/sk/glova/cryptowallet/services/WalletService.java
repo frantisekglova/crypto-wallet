@@ -1,59 +1,26 @@
 package sk.glova.cryptowallet.services;
 
-import static sk.glova.cryptowallet.utils.Helper.getStringFromEnums;
+import javax.transaction.Transactional;
+import sk.glova.cryptowallet.domain.request.AddRequest;
+import sk.glova.cryptowallet.domain.request.TransferRequest;
+import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
+import sk.glova.cryptowallet.domain.model.Wallet;
 
-import java.util.EnumSet;
-import java.util.Map;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
-import sk.glova.cryptowallet.dao.WalletRepository;
-import sk.glova.cryptowallet.exception.OperationNotAllowedException;
-import sk.glova.cryptowallet.model.CryptoCurrency;
-import sk.glova.cryptowallet.model.Currency;
-import sk.glova.cryptowallet.model.Wallet;
+public interface WalletService {
 
-@Service
-@RequiredArgsConstructor
-public class WalletService {
+    Object getAllCryptoCurrencies();
 
-    private final RestTemplate restTemplate = new RestTemplate();
-    private final WalletRepository walletRepository;
+    Wallet createWallet(UpsertWalletRequest request);
 
-    public Object getAllCryptoCurrencies() {
-        final String fsyms = getStringFromEnums(CryptoCurrency.class, ",");
-        final String tsyms = getStringFromEnums(Currency.class, ",");
+    @Transactional
+    void updateWallet(Long walletId, UpsertWalletRequest request);
 
-        return restTemplate.getForObject(
-            "https://min-api.cryptocompare.com/data/pricemulti?fsyms={fsyms}&tsyms={tsyms}",
-            Object.class,
-            Map.of("fsyms", fsyms, "tsyms", tsyms)
-        );
-    }
+    Wallet getWallet(Long walletId);
 
-    public Wallet createWallet(Wallet createRequest) {
-        if (!isCurrencySupported(createRequest.getCurrency())) {
-            throw new OperationNotAllowedException("Currency is not supported.");
-        }
-        if (!isNameFree(createRequest.getName())) {
-            throw new OperationNotAllowedException("Wallet name already exist.");
-        }
-        return walletRepository.save(createRequest);
-    }
+    void deleteWallet(Long walletId);
 
-    private boolean isNameFree(String name) {
-        return walletRepository.findAll().stream()
-            .map(Wallet::getName)
-            .anyMatch(n -> n.equals(name));
-    }
+    void add(Long walletId, AddRequest addRequest);
 
-    private boolean isCurrencySupported(String currency) {
-        final String currencyUppercase = currency.toUpperCase();
-
-        return EnumSet.allOf(CryptoCurrency.class)
-            .stream()
-            .map(Enum::toString)
-            .anyMatch(curr -> curr.equals(currencyUppercase));
-    }
+    void transfer(Long walletId, TransferRequest transferRequest);
 
 }
