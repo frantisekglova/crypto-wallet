@@ -33,11 +33,11 @@ public class Wallet {
 
     // TODO better name than Account
     @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Set<Account> accounts = new HashSet<>();
+    private Set<Currency> currencies = new HashSet<>();
 
-    public void addAccount(Account account) {
-        accounts.add(account);
-        account.setWallet(this);
+    public void addCurrency(Currency currency) {
+        currencies.add(currency);
+        currency.setWallet(this);
     }
 
 }

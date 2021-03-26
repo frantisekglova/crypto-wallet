@@ -22,13 +22,13 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table
-public class Account {
+public class Currency {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
-    private String currency;
+    private String code;
 
     private BigDecimal amount;
 

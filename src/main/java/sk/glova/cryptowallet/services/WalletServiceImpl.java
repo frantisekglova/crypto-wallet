@@ -5,22 +5,31 @@ import static sk.glova.cryptowallet.utils.Helper.getStringFromEnums;
 import java.math.BigDecimal;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import javax.transaction.Transactional;
+import java.util.stream.Collectors;
+import javassist.NotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import sk.glova.cryptowallet.dao.WalletRepository;
-import sk.glova.cryptowallet.domain.CryptoCurrency;
-import sk.glova.cryptowallet.domain.Currency;
-import sk.glova.cryptowallet.domain.model.Account;
+import sk.glova.cryptowallet.domain.CryptoCurrencyCode;
+import sk.glova.cryptowallet.domain.CurrencyCode;
+import sk.glova.cryptowallet.domain.model.CryptoCurrencyRate;
+import sk.glova.cryptowallet.domain.model.Currency;
 import sk.glova.cryptowallet.domain.model.Wallet;
 import sk.glova.cryptowallet.domain.request.AddRequest;
 import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
+import sk.glova.cryptowallet.exception.OperationNotAllowedException;
 
 @Service
 @RequiredArgsConstructor
@@ -29,29 +38,40 @@ public class WalletServiceImpl implements WalletService {
     private static final String MULTI_URL = "https://min-api.cryptocompare.com/data/pricemulti?fsyms={fsyms}&tsyms={tsyms}";
     private static final String SINGLE_URL = "https://min-api.cryptocompare.com/data/price?fsym={fsym}&tsyms={tsyms}";
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
     private final WalletRepository walletRepository;
 
     @Override
-    public Object getAllCryptoCurrencies() {
-        final String fsyms = getStringFromEnums(CryptoCurrency.class, ",");
-        final String tsyms = getStringFromEnums(Currency.class, ",");
+    public Page<CryptoCurrencyRate> getAllCryptoCurrencies(Pageable pageable) {
+        final String fsyms = getStringFromEnums(CryptoCurrencyCode.class, ",");
+        final String tsyms = getStringFromEnums(CurrencyCode.class, ",");
 
-        return restTemplate.getForObject(
+        Map<String, Map<String, BigDecimal>> map = exchangeAsMap(
             MULTI_URL,
-            Object.class,
+            new ParameterizedTypeReference<>() {
+            },
             Map.of("fsyms", fsyms, "tsyms", tsyms)
         );
+        final int start = (int) pageable.getOffset();
+        final int end = Math.min((start + pageable.getPageSize()), map.size());
+
+        final List<CryptoCurrencyRate> cryptoCurrencyRates = map.keySet()
+            .stream()
+            .map(key -> CryptoCurrencyRate.builder().name(key).currencyRates(map.get(key)).build())
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(cryptoCurrencyRates.subList(start, end), pageable, cryptoCurrencyRates.size());
     }
 
     @Override
+    @Transactional
     public Wallet createWallet(UpsertWalletRequest request) {
         // this isn't necessary, but for this use case when we dont have owner I want to have unique names.
         checkName(request.getName());
 
         Wallet wallet = Wallet.builder()
             .name(request.getName())
-            .accounts(new HashSet<>())
+            .currencies(new HashSet<>())
             .build();
 
         return walletRepository.save(wallet);
@@ -59,7 +79,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void updateWallet(Long walletId, UpsertWalletRequest request) {
+    public void updateWallet(Long walletId, UpsertWalletRequest request) throws NotFoundException {
         final Wallet wallet = findByIdOrThrow(walletId);
 
         final String name = request.getName();
@@ -69,12 +89,14 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
-    public Wallet getWallet(Long walletId) {
+    @Transactional(readOnly = true)
+    public Wallet getWallet(Long walletId) throws NotFoundException {
         return findByIdOrThrow(walletId);
     }
 
     @Override
-    public void deleteWallet(Long walletId) {
+    @Transactional
+    public void deleteWallet(Long walletId) throws NotFoundException {
         checkWalletExist(walletId);
 
         walletRepository.deleteById(walletId);
@@ -82,14 +104,14 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void add(Long walletId, AddRequest addRequest) {
+    public void add(Long walletId, AddRequest addRequest) throws NotFoundException {
         final Wallet wallet = findByIdOrThrow(walletId);
 
         final String walletCurrency = sanitizeCurrency(addRequest.getCurrencyInWallet());
         final String inputCurrency = sanitizeCurrency(addRequest.getCurrencyInInput());
 
-        checkCurrency(walletCurrency, CryptoCurrency.class);
-        checkCurrency(inputCurrency, Currency.class);
+        checkCurrency(walletCurrency, CryptoCurrencyCode.class);
+        checkCurrency(inputCurrency, CurrencyCode.class);
 
         final BigDecimal rate = getConversionRate(inputCurrency, walletCurrency);
         final BigDecimal addition = addRequest.getAmount().multiply(rate);
@@ -100,7 +122,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void transfer(Long walletId, TransferRequest transferRequest) {
+    public void transfer(Long walletId, TransferRequest transferRequest) throws NotFoundException {
         // check whether both Wallets exists
         final Wallet walletFrom = findByIdOrThrow(walletId);
         final Wallet walletTo = findByIdOrThrow(transferRequest.getDestWalletId());
@@ -109,16 +131,16 @@ public class WalletServiceImpl implements WalletService {
         final String currencyTo = sanitizeCurrency(transferRequest.getCurrencyTo());
 
         // check whether there are specified supported currencies
-        checkCurrency(currencyTo, CryptoCurrency.class);
-        checkCurrency(currencyFrom, CryptoCurrency.class);
+        checkCurrency(currencyTo, CryptoCurrencyCode.class);
+        checkCurrency(currencyFrom, CryptoCurrencyCode.class);
 
         // check whether Wallet has open Account with specified currency
-        final Account account = walletFrom.getAccounts().stream()
-            .filter(acc -> acc.getCurrency().equals(currencyFrom))
+        final Currency currency = walletFrom.getCurrencies().stream()
+            .filter(code -> code.getCode().equals(currencyFrom))
             .findAny()
             .orElseThrow(() -> new IllegalStateException("Wallet dont have open account with specified currency."));
 
-        final BigDecimal oldAmount = account.getAmount();
+        final BigDecimal oldAmount = currency.getAmount();
         final BigDecimal amountForTransfer = transferRequest.getAmount();
 
         // check whether there is enough money for transaction
@@ -127,7 +149,7 @@ public class WalletServiceImpl implements WalletService {
         }
 
         // subtract money from walletFrom
-        account.setAmount(oldAmount.subtract(amountForTransfer));
+        currency.setAmount(oldAmount.subtract(amountForTransfer));
 
         // add money to walletTo
         final BigDecimal rate = getConversionRate(currencyFrom, currencyTo);
@@ -136,32 +158,32 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private void doAdd(Wallet wallet, String walletCurrency, BigDecimal addition) {
-        final Optional<Account> any = wallet.getAccounts().stream()
-            .filter(account -> account.getCurrency().equals(walletCurrency))
+        final Optional<Currency> any = wallet.getCurrencies().stream()
+            .filter(currency -> currency.getCode().equals(walletCurrency))
             .findAny();
 
         if (any.isPresent()) {
-            Account account = any.get();
-            BigDecimal amount = account.getAmount();
-            account.setAmount(amount.add(addition));
+            Currency currency = any.get();
+            BigDecimal amount = currency.getAmount();
+            currency.setAmount(amount.add(addition));
         } else {
-            Account account = Account.builder()
-                .currency(walletCurrency)
+            Currency currency = Currency.builder()
+                .code(walletCurrency)
                 .amount(addition)
                 .build();
-            wallet.addAccount(account);
+            wallet.addCurrency(currency);
         }
     }
 
-    private void checkWalletExist(Long walletId) {
+    private void checkWalletExist(Long walletId) throws NotFoundException {
         if (!walletRepository.existsById(walletId)) {
-            throw new IllegalStateException("Wallet with given ID does not exist");
+            throw new NotFoundException("Wallet with given ID does not exist");
         }
     }
 
     private void checkName(String name) {
         if (walletRepository.findByName(name).isPresent()) {
-            throw new IllegalStateException("Wallet name already exist.");
+            throw new OperationNotAllowedException("Wallet name already exist.");
         }
     }
 
@@ -174,7 +196,7 @@ public class WalletServiceImpl implements WalletService {
             .noneMatch(curr -> curr.equals(sanitizedCurrency));
 
         if (isNotSupported) {
-            throw new IllegalStateException("Currency [" + sanitizedCurrency + "] is not supported.");
+            throw new OperationNotAllowedException("Currency [" + sanitizedCurrency + "] is not supported.");
         }
     }
 
@@ -182,9 +204,9 @@ public class WalletServiceImpl implements WalletService {
         return currency.toUpperCase();
     }
 
-    private Wallet findByIdOrThrow(Long walletId) {
+    private Wallet findByIdOrThrow(Long walletId) throws NotFoundException {
         return walletRepository.findById(walletId)
-            .orElseThrow(() -> new IllegalStateException("Wallet with given ID does not exist"));
+            .orElseThrow(() -> new NotFoundException("Wallet with given ID does not exist"));
     }
 
     private boolean isAccepted(String newValue, String oldValue) {
@@ -192,16 +214,18 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private BigDecimal getConversionRate(String from, String to) {
-        final Object object = restTemplate.getForObject(
+        final Map<String, BigDecimal> map = exchangeAsMap(
             SINGLE_URL,
-            Object.class,
+            new ParameterizedTypeReference<>() {
+            },
             Map.of("fsym", from, "tsyms", to)
         );
 
-        @SuppressWarnings("unchecked") // I am sure what output will be from external API
-        LinkedHashMap<String, Double> obj = (LinkedHashMap<String, Double>) object;
-        assert obj != null;
-        return BigDecimal.valueOf(obj.get(to));
+        return map.get(to);
+    }
+
+    public <V, K> Map<V, K> exchangeAsMap(String uri, ParameterizedTypeReference<Map<V, K>> responseType, Map<String, String> uriParams) {
+        return restTemplate.exchange(uri, HttpMethod.GET, null, responseType, uriParams).getBody();
     }
 
 }
