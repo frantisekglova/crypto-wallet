@@ -25,7 +25,6 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
-
     <dependency>
       <groupId>com.h2database</groupId>
       <artifactId>h2</artifactId>
@@ -42,19 +41,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.eirslett</groupId>
-      <artifactId>frontend-maven-plugin</artifactId>
-      <version>1.11.3</version>
-    </dependency>
-
-    <dependency>
       <groupId>org.springdoc</groupId>
       <artifactId>springdoc-openapi-ui</artifactId>
       <version>1.5.2</version>
     </dependency>
-
   </dependencies>
-
   <build>
     <plugins>
       <plugin>
@@ -71,5 +62,4 @@
       </plugin>
     </plugins>
   </build>
-
 </project>
