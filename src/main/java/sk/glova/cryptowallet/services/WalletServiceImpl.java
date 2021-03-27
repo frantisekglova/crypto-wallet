@@ -58,6 +58,7 @@ public class WalletServiceImpl implements WalletService {
         final List<CryptoCurrencyRate> cryptoCurrencyRates = map.keySet()
             .stream()
             .map(key -> CryptoCurrencyRate.builder().name(key).currencyRates(map.get(key)).build())
+            .sorted()
             .collect(Collectors.toList());
 
         return new PageImpl<>(cryptoCurrencyRates.subList(start, end), pageable, cryptoCurrencyRates.size());

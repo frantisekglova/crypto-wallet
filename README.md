@@ -1,1 +1,1 @@
-# crypto-wallet
+# crypto-wallet-simulator
