@@ -10,7 +10,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import javassist.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
@@ -29,6 +28,7 @@ import sk.glova.cryptowallet.domain.model.Wallet;
 import sk.glova.cryptowallet.domain.request.AddRequest;
 import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
+import sk.glova.cryptowallet.exception.EntityNotFoundException;
 import sk.glova.cryptowallet.exception.OperationNotAllowedException;
 
 @Service
@@ -79,7 +79,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void updateWallet(Long walletId, UpsertWalletRequest request) throws NotFoundException {
+    public void updateWallet(Long walletId, UpsertWalletRequest request) {
         final Wallet wallet = findByIdOrThrow(walletId);
 
         final String name = request.getName();
@@ -90,13 +90,13 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(readOnly = true)
-    public Wallet getWallet(Long walletId) throws NotFoundException {
+    public Wallet getWallet(Long walletId) {
         return findByIdOrThrow(walletId);
     }
 
     @Override
     @Transactional
-    public void deleteWallet(Long walletId) throws NotFoundException {
+    public void deleteWallet(Long walletId) {
         checkWalletExist(walletId);
 
         walletRepository.deleteById(walletId);
@@ -104,7 +104,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void add(Long walletId, AddRequest addRequest) throws NotFoundException {
+    public void add(Long walletId, AddRequest addRequest) {
         final Wallet wallet = findByIdOrThrow(walletId);
 
         final String walletCurrency = sanitizeCurrency(addRequest.getCurrencyInWallet());
@@ -122,7 +122,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void transfer(Long walletId, TransferRequest transferRequest) throws NotFoundException {
+    public void transfer(Long walletId, TransferRequest transferRequest) {
         // check whether both Wallets exists
         final Wallet walletFrom = findByIdOrThrow(walletId);
         final Wallet walletTo = findByIdOrThrow(transferRequest.getDestWalletId());
@@ -138,14 +138,14 @@ public class WalletServiceImpl implements WalletService {
         final Currency currency = walletFrom.getCurrencies().stream()
             .filter(code -> code.getCode().equals(currencyFrom))
             .findAny()
-            .orElseThrow(() -> new IllegalStateException("Wallet dont have open account with specified currency."));
+            .orElseThrow(() -> new OperationNotAllowedException("Wallet dont have open account with specified currency."));
 
         final BigDecimal oldAmount = currency.getAmount();
         final BigDecimal amountForTransfer = transferRequest.getAmount();
 
         // check whether there is enough money for transaction
         if (oldAmount.compareTo(amountForTransfer) < 0) {
-            throw new IllegalStateException("Wallet dont have enough money in account with specified currency.");
+            throw new OperationNotAllowedException("Wallet dont have enough money in account with specified currency.");
         }
 
         // subtract money from walletFrom
@@ -175,9 +175,9 @@ public class WalletServiceImpl implements WalletService {
         }
     }
 
-    private void checkWalletExist(Long walletId) throws NotFoundException {
+    private void checkWalletExist(Long walletId) {
         if (!walletRepository.existsById(walletId)) {
-            throw new NotFoundException("Wallet with given ID does not exist");
+            throw new EntityNotFoundException("Wallet with given ID does not exist");
         }
     }
 
@@ -204,9 +204,9 @@ public class WalletServiceImpl implements WalletService {
         return currency.toUpperCase();
     }
 
-    private Wallet findByIdOrThrow(Long walletId) throws NotFoundException {
+    private Wallet findByIdOrThrow(Long walletId) {
         return walletRepository.findById(walletId)
-            .orElseThrow(() -> new NotFoundException("Wallet with given ID does not exist"));
+            .orElseThrow(() -> new EntityNotFoundException("Wallet with given ID does not exist"));
     }
 
     private boolean isAccepted(String newValue, String oldValue) {

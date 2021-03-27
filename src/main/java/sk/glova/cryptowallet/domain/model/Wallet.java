@@ -25,13 +25,13 @@ import lombok.Setter;
 @Table
 public class Wallet {
 
+    // TODO use org.hibernate.id.UUIDGenerator (https://thorben-janssen.com/generate-uuids-primary-keys-hibernate/)
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
 
     private String name;
 
-    // TODO better name than Account
     @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Currency> currencies = new HashSet<>();
 

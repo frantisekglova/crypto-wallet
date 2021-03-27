@@ -4,7 +4,6 @@ import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 import static sk.glova.cryptowallet.utils.Helper.getCurrentLocationWithId;
 
-import javassist.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +25,7 @@ import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
 import sk.glova.cryptowallet.services.WalletServiceImpl;
 
+//TODO add swagger
 @RestController
 @RequestMapping(value = "rest/v1/wallet", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
@@ -51,19 +51,19 @@ public class WalletController {
     public void updateWallet(
         @PathVariable Long walletId,
         @RequestBody UpsertWalletRequest request
-    ) throws NotFoundException {
+    ) {
         service.updateWallet(walletId, request);
     }
 
     @ResponseStatus(OK)
     @GetMapping("/{walletId}")
-    public Wallet getWallet(@PathVariable Long walletId) throws NotFoundException {
+    public Wallet getWallet(@PathVariable Long walletId) {
         return service.getWallet(walletId);
     }
 
     @ResponseStatus(OK)
     @DeleteMapping("/{walletId}")
-    public void deleteWallet(@PathVariable Long walletId) throws NotFoundException {
+    public void deleteWallet(@PathVariable Long walletId) {
         service.deleteWallet(walletId);
     }
 
@@ -72,7 +72,7 @@ public class WalletController {
     public void add(
         @PathVariable Long walletId,
         @RequestBody AddRequest addRequest
-    ) throws NotFoundException {
+    ) {
         service.add(walletId, addRequest);
     }
 
@@ -81,7 +81,7 @@ public class WalletController {
     public void transfer(
         @PathVariable Long walletId,
         @RequestBody TransferRequest transferRequest
-    ) throws NotFoundException {
+    ) {
         service.transfer(walletId, transferRequest);
     }
 
