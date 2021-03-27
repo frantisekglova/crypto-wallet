@@ -81,11 +81,11 @@ public class WalletServiceImpl implements WalletService {
     @Transactional
     public void updateWallet(Long walletId, UpsertWalletRequest request) {
         final Wallet wallet = findByIdOrThrow(walletId);
-
         final String name = request.getName();
-        if (isAccepted(name, wallet.getName())) {
-            wallet.setName(name);
-        }
+
+        checkNewName(name, wallet.getName());
+
+        wallet.setName(name);
     }
 
     @Override
@@ -138,14 +138,14 @@ public class WalletServiceImpl implements WalletService {
         final Currency currency = walletFrom.getCurrencies().stream()
             .filter(code -> code.getCode().equals(currencyFrom))
             .findAny()
-            .orElseThrow(() -> new OperationNotAllowedException("Wallet dont have open account with specified currency."));
+            .orElseThrow(() -> new OperationNotAllowedException("Wallet does not have specified currency."));
 
         final BigDecimal oldAmount = currency.getAmount();
         final BigDecimal amountForTransfer = transferRequest.getAmount();
 
         // check whether there is enough money for transaction
         if (oldAmount.compareTo(amountForTransfer) < 0) {
-            throw new OperationNotAllowedException("Wallet dont have enough money in account with specified currency.");
+            throw new OperationNotAllowedException("Wallet does not have enough amount in specified currency.");
         }
 
         // subtract money from walletFrom
@@ -182,6 +182,9 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private void checkName(String name) {
+        if (name == null || name.length() == 0) {
+            throw new OperationNotAllowedException("Provided name was null or empty string.");
+        }
         if (walletRepository.findByName(name).isPresent()) {
             throw new OperationNotAllowedException("Wallet name already exist.");
         }
@@ -209,8 +212,12 @@ public class WalletServiceImpl implements WalletService {
             .orElseThrow(() -> new EntityNotFoundException("Wallet with given ID does not exist"));
     }
 
-    private boolean isAccepted(String newValue, String oldValue) {
-        return newValue != null && newValue.length() > 0 && !Objects.equals(newValue, oldValue);
+    private void checkNewName(String newValue, String oldValue) {
+        if (Objects.equals(newValue, oldValue)) {
+            throw new OperationNotAllowedException("Provided name is the same as it was.");
+        }
+
+        checkName(newValue);
     }
 
     private BigDecimal getConversionRate(String from, String to) {

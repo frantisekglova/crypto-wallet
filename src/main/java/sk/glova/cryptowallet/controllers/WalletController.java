@@ -4,7 +4,11 @@ import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
 import static sk.glova.cryptowallet.utils.Helper.getCurrentLocationWithId;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -25,7 +29,6 @@ import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
 import sk.glova.cryptowallet.services.WalletServiceImpl;
 
-//TODO add swagger
 @RestController
 @RequestMapping(value = "rest/v1/wallet", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
@@ -33,12 +36,18 @@ public class WalletController {
 
     final private WalletServiceImpl service;
 
+    @Operation(description = "Returns all supported cryptocurrencies with their rates.")
+    @PageableAsQueryParam
     @ResponseStatus(OK)
     @GetMapping("/getCurrencyRates")
-    public Page<CryptoCurrencyRate> getAllCryptoCurrencies(Pageable pageable) {
+    public Page<CryptoCurrencyRate> getAllCryptoCurrencies(@Parameter(hidden = true) Pageable pageable) {
         return service.getAllCryptoCurrencies(pageable);
     }
 
+    @Operation(description = "Creates an empty wallet with the name based on upsert request DTO.")
+    @ApiResponse(responseCode = "422", description = "When:<ul>" +
+        "<li>provided name is already in use</li>" +
+        "<li>provided name is null or empty string</li></ul>")
     @ResponseStatus(CREATED)
     @PostMapping
     public ResponseEntity<Wallet> createWallet(@RequestBody UpsertWalletRequest request) {
@@ -46,43 +55,67 @@ public class WalletController {
         return ResponseEntity.created(getCurrentLocationWithId(savedWallet.getId())).body(savedWallet);
     }
 
+    @Operation(description = "Updates the wallet with given ID. Values are taken from given upsert request DTO.")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "422", description = "When:<ul>" +
+        "<li>provided name is already in use</li>" +
+        "<li>provided name is the same as it was</li>" +
+        "<li>provided name is null or empty string</li></ul>")
     @ResponseStatus(OK)
     @PutMapping("/{walletId}")
-    public void updateWallet(
+    public Wallet updateWallet(
         @PathVariable Long walletId,
         @RequestBody UpsertWalletRequest request
     ) {
         service.updateWallet(walletId, request);
+        return service.getWallet(walletId);
     }
 
+    @Operation(description = "Returns the wallet with given ID.")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
     @ResponseStatus(OK)
     @GetMapping("/{walletId}")
     public Wallet getWallet(@PathVariable Long walletId) {
         return service.getWallet(walletId);
     }
 
+    @Operation(description = "Deletes the wallet with given ID.")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
     @ResponseStatus(OK)
     @DeleteMapping("/{walletId}")
-    public void deleteWallet(@PathVariable Long walletId) {
+    public Wallet deleteWallet(@PathVariable Long walletId) {
+        final Wallet wallet = service.getWallet(walletId);
         service.deleteWallet(walletId);
+        return wallet;
     }
 
+    @Operation(description = "Creates a area item below the selected parent area.")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "422", description = "When currency or cryptocurrency is not supported.")
     @ResponseStatus(OK)
     @PostMapping("/{walletId}/add")
-    public void add(
+    public Wallet add(
         @PathVariable Long walletId,
         @RequestBody AddRequest addRequest
     ) {
         service.add(walletId, addRequest);
+        return service.getWallet(walletId);
     }
 
+    @Operation(description = "Creates a area item below the selected parent area.")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "422", description = "When:<ul>" +
+        "<li>currency or cryptocurrency is not supported</li>" +
+        "<li>wallet does not have specified currency</li>" +
+        "<li>wallet does not have enough amount in specified currency</li></ul>")
     @ResponseStatus(OK)
     @PostMapping("/{walletId}/transfer")
-    public void transfer(
+    public Wallet transfer(
         @PathVariable Long walletId,
         @RequestBody TransferRequest transferRequest
     ) {
         service.transfer(walletId, transferRequest);
+        return service.getWallet(walletId);
     }
 
 }

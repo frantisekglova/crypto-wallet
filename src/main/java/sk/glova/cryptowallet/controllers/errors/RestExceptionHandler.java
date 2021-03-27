@@ -15,21 +15,19 @@ public class RestExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFoundEntity(HttpServletRequest request, EntityNotFoundException ex) {
-        return new ResponseEntity<>(createApiError(ex), HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(createApiError(ex).status(HttpStatus.NOT_FOUND.toString()).build(), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(OperationNotAllowedException.class)
     public ResponseEntity<ApiError> handleUnprocessableEntity(HttpServletRequest request, OperationNotAllowedException ex) {
-        return new ResponseEntity<>(createApiError(ex), HttpStatus.UNPROCESSABLE_ENTITY);
+        return new ResponseEntity<>(createApiError(ex).status(HttpStatus.UNPROCESSABLE_ENTITY.toString()).build(), HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
-    private ApiError createApiError(RuntimeException ex) {
+    private ApiError.ApiErrorBuilder createApiError(RuntimeException ex) {
         return ApiError.builder()
-            .status(HttpStatus.NOT_FOUND.toString())
             .message(ex.getMessage())
             .exception(ex.getClass().getSimpleName())
-            .timestamp(Instant.now())
-            .build();
+            .timestamp(Instant.now());
     }
 
 }
