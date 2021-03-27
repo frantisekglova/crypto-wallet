@@ -46,13 +46,11 @@ public class WalletServiceImpl implements WalletService {
         final String fsyms = getStringFromEnums(CryptoCurrencyCode.class, ",");
         final String tsyms = getStringFromEnums(CurrencyCode.class, ",");
 
-        Map<String, Map<String, BigDecimal>> map = exchangeAsMap(
-            MULTI_URL,
-            new ParameterizedTypeReference<>() {
-            },
-            Map.of("fsyms", fsyms, "tsyms", tsyms)
-        );
+        final Object obj = restTemplate.getForObject(MULTI_URL, Object.class, fsyms, tsyms);
+        @SuppressWarnings("unchecked")
+        Map<String, Map<String, BigDecimal>> map = (Map<String, Map<String, BigDecimal>>) obj;
         final int start = (int) pageable.getOffset();
+        assert map != null;
         final int end = Math.min((start + pageable.getPageSize()), map.size());
 
         final List<CryptoCurrencyRate> cryptoCurrencyRates = map.keySet()
@@ -221,15 +219,12 @@ public class WalletServiceImpl implements WalletService {
         checkName(newValue);
     }
 
-    private BigDecimal getConversionRate(String from, String to) {
-        final Map<String, BigDecimal> map = exchangeAsMap(
-            SINGLE_URL,
-            new ParameterizedTypeReference<>() {
-            },
-            Map.of("fsym", from, "tsyms", to)
-        );
-
-        return map.get(to);
+    private BigDecimal getConversionRate(String fsym, String tsyms) {
+        final Object obj = restTemplate.getForObject(SINGLE_URL, Object.class, fsym, tsyms);
+        @SuppressWarnings("unchecked") //in Java8 does not support parameterized types
+        final Map<String, Double> map = (Map<String, Double>) obj;
+        assert map != null;
+        return BigDecimal.valueOf(map.get(tsyms));
     }
 
     public <V, K> Map<V, K> exchangeAsMap(String uri, ParameterizedTypeReference<Map<V, K>> responseType, Map<String, String> uriParams) {
