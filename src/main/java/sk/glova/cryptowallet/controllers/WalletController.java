@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.springdoc.core.converters.models.PageableAsQueryParam;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -22,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import sk.glova.cryptowallet.domain.model.CryptoCurrencyRate;
 import sk.glova.cryptowallet.domain.model.Wallet;
 import sk.glova.cryptowallet.domain.request.AddRequest;
 import sk.glova.cryptowallet.domain.request.TransferRequest;
@@ -35,14 +33,6 @@ import sk.glova.cryptowallet.services.WalletServiceImpl;
 public class WalletController {
 
     final private WalletServiceImpl service;
-
-    @Operation(description = "Returns all supported cryptocurrencies with their rates.")
-    @PageableAsQueryParam
-    @ResponseStatus(OK)
-    @GetMapping("/getCurrencyRates")
-    public Page<CryptoCurrencyRate> getAllCryptoCurrencies(@Parameter(hidden = true) Pageable pageable) {
-        return service.getAllCryptoCurrencies(pageable);
-    }
 
     @Operation(description = "Creates an empty wallet with the name based on upsert request DTO.")
     @ApiResponse(responseCode = "422", description = "When:<ul>" +
@@ -79,6 +69,13 @@ public class WalletController {
         return service.getWallet(walletId);
     }
 
+    @Operation(description = "Returns all wallets. Result is paginated with sorting capabilities.")
+    @ResponseStatus(OK)
+    @GetMapping
+    public Page<Wallet> getWallets(@Parameter(hidden = true) Pageable pageable) {
+        return service.getWallets(pageable);
+    }
+
     @Operation(description = "Deletes the wallet with given ID.")
     @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
     @ResponseStatus(OK)
@@ -89,7 +86,8 @@ public class WalletController {
         return wallet;
     }
 
-    @Operation(description = "Creates a area item below the selected parent area.")
+    @Operation(description = "Adds currency to wallet with given ID. It converts currencyFrom into currencyTo according current rate (if currency " +
+        "exist in wallet - given amount increments the previous one, if does not exist - it creates new one with given amount).")
     @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
     @ApiResponse(responseCode = "422", description = "When currency or cryptocurrency is not supported.")
     @ResponseStatus(OK)
@@ -102,7 +100,9 @@ public class WalletController {
         return service.getWallet(walletId);
     }
 
-    @Operation(description = "Creates a area item below the selected parent area.")
+    @Operation(description = "Transfers currency from wallet with given ID. It converts currencyFrom into currencyTo according current rate. It " +
+        "decrements wallet from which payment is outgoing and increment wallet to which payment is incoming (if currency exist in wallet - given " +
+        "amount increments the previous one, if does not exist - it creates new one with given amount).")
     @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
     @ApiResponse(responseCode = "422", description = "When:<ul>" +
         "<li>currency or cryptocurrency is not supported</li>" +

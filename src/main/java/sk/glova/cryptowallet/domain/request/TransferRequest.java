@@ -11,6 +11,6 @@ public class TransferRequest {
     private String currencyFrom;
     private String currencyTo;
     private BigDecimal amount;
-    private Long destWalletId;
+    private Long destinationWalletId;
 
 }

@@ -1,28 +1,21 @@
 package sk.glova.cryptowallet.services;
 
-import static sk.glova.cryptowallet.utils.Helper.getStringFromEnums;
-
 import java.math.BigDecimal;
 import java.util.EnumSet;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import sk.glova.cryptowallet.dao.WalletRepository;
 import sk.glova.cryptowallet.domain.CryptoCurrencyCode;
 import sk.glova.cryptowallet.domain.CurrencyCode;
-import sk.glova.cryptowallet.domain.model.CryptoCurrencyRate;
 import sk.glova.cryptowallet.domain.model.Currency;
 import sk.glova.cryptowallet.domain.model.Wallet;
 import sk.glova.cryptowallet.domain.request.AddRequest;
@@ -35,37 +28,15 @@ import sk.glova.cryptowallet.exception.OperationNotAllowedException;
 @RequiredArgsConstructor
 public class WalletServiceImpl implements WalletService {
 
-    private static final String MULTI_URL = "https://min-api.cryptocompare.com/data/pricemulti?fsyms={fsyms}&tsyms={tsyms}";
-    private static final String SINGLE_URL = "https://min-api.cryptocompare.com/data/price?fsym={fsym}&tsyms={tsyms}";
-
     private final RestTemplate restTemplate;
     private final WalletRepository walletRepository;
-
-    @Override
-    public Page<CryptoCurrencyRate> getAllCryptoCurrencies(Pageable pageable) {
-        final String fsyms = getStringFromEnums(CryptoCurrencyCode.class, ",");
-        final String tsyms = getStringFromEnums(CurrencyCode.class, ",");
-
-        final Object obj = restTemplate.getForObject(MULTI_URL, Object.class, fsyms, tsyms);
-        @SuppressWarnings("unchecked")
-        Map<String, Map<String, BigDecimal>> map = (Map<String, Map<String, BigDecimal>>) obj;
-        final int start = (int) pageable.getOffset();
-        assert map != null;
-        final int end = Math.min((start + pageable.getPageSize()), map.size());
-
-        final List<CryptoCurrencyRate> cryptoCurrencyRates = map.keySet()
-            .stream()
-            .map(key -> CryptoCurrencyRate.builder().name(key).currencyRates(map.get(key)).build())
-            .sorted()
-            .collect(Collectors.toList());
-
-        return new PageImpl<>(cryptoCurrencyRates.subList(start, end), pageable, cryptoCurrencyRates.size());
-    }
+    @Value("${external.api.single-url}")
+    private String url;
 
     @Override
     @Transactional
     public Wallet createWallet(UpsertWalletRequest request) {
-        // this isn't necessary, but for this use case when we dont have owner I want to have unique names.
+        // this isn't necessary, but this use-case dont have owner in wallet, so name should be unique
         checkName(request.getName());
 
         Wallet wallet = Wallet.builder()
@@ -106,8 +77,8 @@ public class WalletServiceImpl implements WalletService {
     public void add(Long walletId, AddRequest addRequest) {
         final Wallet wallet = findByIdOrThrow(walletId);
 
-        final String walletCurrency = sanitizeCurrency(addRequest.getCurrencyInWallet());
-        final String inputCurrency = sanitizeCurrency(addRequest.getCurrencyInInput());
+        final String walletCurrency = sanitizeCurrency(addRequest.getCurrencyTo());
+        final String inputCurrency = sanitizeCurrency(addRequest.getCurrencyFrom());
 
         checkCurrency(walletCurrency, CryptoCurrencyCode.class);
         checkCurrency(inputCurrency, CurrencyCode.class);
@@ -115,7 +86,6 @@ public class WalletServiceImpl implements WalletService {
         final BigDecimal rate = getConversionRate(inputCurrency, walletCurrency);
         final BigDecimal addition = addRequest.getAmount().multiply(rate);
 
-        // find out whether an account in specified currency already exists in wallet, if no create new
         doAdd(wallet, walletCurrency, addition);
     }
 
@@ -124,7 +94,7 @@ public class WalletServiceImpl implements WalletService {
     public void transfer(Long walletId, TransferRequest transferRequest) {
         // check whether both Wallets exists
         final Wallet walletFrom = findByIdOrThrow(walletId);
-        final Wallet walletTo = findByIdOrThrow(transferRequest.getDestWalletId());
+        final Wallet walletTo = findByIdOrThrow(transferRequest.getDestinationWalletId());
 
         final String currencyFrom = sanitizeCurrency(transferRequest.getCurrencyFrom());
         final String currencyTo = sanitizeCurrency(transferRequest.getCurrencyTo());
@@ -147,25 +117,35 @@ public class WalletServiceImpl implements WalletService {
             throw new OperationNotAllowedException("Wallet does not have enough amount in specified currency.");
         }
 
-        // subtract money from walletFrom
+        // subtract amount from walletFrom
         currency.setAmount(oldAmount.subtract(amountForTransfer));
 
-        // add money to walletTo
+        // add amount to walletTo
         final BigDecimal rate = getConversionRate(currencyFrom, currencyTo);
         final BigDecimal addition = transferRequest.getAmount().multiply(rate);
+
         doAdd(walletTo, currencyTo, addition);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<Wallet> getWallets(Pageable pageable) {
+        return walletRepository.findAll(pageable);
+    }
+
     private void doAdd(Wallet wallet, String walletCurrency, BigDecimal addition) {
+        // check whether exist currency
         final Optional<Currency> any = wallet.getCurrencies().stream()
             .filter(currency -> currency.getCode().equals(walletCurrency))
             .findAny();
 
         if (any.isPresent()) {
+            // increment existing currency
             Currency currency = any.get();
             BigDecimal amount = currency.getAmount();
             currency.setAmount(amount.add(addition));
         } else {
+            // create new currency with specified amount
             Currency currency = Currency.builder()
                 .code(walletCurrency)
                 .amount(addition)
@@ -220,15 +200,11 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private BigDecimal getConversionRate(String fsym, String tsyms) {
-        final Object obj = restTemplate.getForObject(SINGLE_URL, Object.class, fsym, tsyms);
-        @SuppressWarnings("unchecked") //in Java8 does not support parameterized types
+        final Object obj = restTemplate.getForObject(url, Object.class, fsym, tsyms);
+        @SuppressWarnings("unchecked") // JDK 8 does not support parameterized types
         final Map<String, Double> map = (Map<String, Double>) obj;
         assert map != null;
         return BigDecimal.valueOf(map.get(tsyms));
-    }
-
-    public <V, K> Map<V, K> exchangeAsMap(String uri, ParameterizedTypeReference<Map<V, K>> responseType, Map<String, String> uriParams) {
-        return restTemplate.exchange(uri, HttpMethod.GET, null, responseType, uriParams).getBody();
     }
 
 }
