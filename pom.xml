@@ -10,7 +10,7 @@
   </parent>
   <groupId>sk.glova</groupId>
   <artifactId>crypto-wallet</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>1.0.0</version>
   <name>crypto-wallet</name>
   <description>App crypto currency wallet</description>
   <properties>
