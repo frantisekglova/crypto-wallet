@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import sk.glova.cryptowallet.domain.model.CryptoCurrencyRate;
-import sk.glova.cryptowallet.services.RateServiceImpl;
+import sk.glova.cryptowallet.services.impl.RateServiceImpl;
 
 @RestController
 @RequestMapping(value = "rest/v1/rate", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -26,7 +26,7 @@ public class RateController {
     @Operation(description = "Returns all supported cryptocurrencies with their rates. Result is paginated with sorting capabilities.")
     @PageableAsQueryParam
     @ResponseStatus(OK)
-    @GetMapping("/getRates")
+    @GetMapping
     public Page<CryptoCurrencyRate> getRates(@Parameter(hidden = true) Pageable pageable) {
         return service.getRates(pageable);
     }

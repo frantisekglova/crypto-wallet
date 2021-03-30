@@ -25,7 +25,7 @@ import sk.glova.cryptowallet.domain.model.Wallet;
 import sk.glova.cryptowallet.domain.request.AddRequest;
 import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
-import sk.glova.cryptowallet.services.WalletServiceImpl;
+import sk.glova.cryptowallet.services.impl.WalletServiceImpl;
 
 @RestController
 @RequestMapping(value = "rest/v1/wallet", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -46,7 +46,7 @@ public class WalletController {
     }
 
     @Operation(description = "Updates the wallet with given ID. Values are taken from given upsert request DTO.")
-    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist.")
     @ApiResponse(responseCode = "422", description = "When:<ul>" +
         "<li>provided name is already in use</li>" +
         "<li>provided name is the same as it was</li>" +
@@ -62,7 +62,7 @@ public class WalletController {
     }
 
     @Operation(description = "Returns the wallet with given ID.")
-    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist.")
     @ResponseStatus(OK)
     @GetMapping("/{walletId}")
     public Wallet getWallet(@PathVariable Long walletId) {
@@ -77,7 +77,7 @@ public class WalletController {
     }
 
     @Operation(description = "Deletes the wallet with given ID.")
-    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist.")
     @ResponseStatus(OK)
     @DeleteMapping("/{walletId}")
     public Wallet deleteWallet(@PathVariable Long walletId) {
@@ -88,7 +88,7 @@ public class WalletController {
 
     @Operation(description = "Adds currency to wallet with given ID. It converts currencyFrom into currencyTo according current rate (if currency " +
         "exist in wallet - given amount increments the previous one, if does not exist - it creates new one with given amount).")
-    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist.")
     @ApiResponse(responseCode = "422", description = "When currency or cryptocurrency is not supported.")
     @ResponseStatus(OK)
     @PostMapping("/{walletId}/add")
@@ -103,7 +103,7 @@ public class WalletController {
     @Operation(description = "Transfers currency from wallet with given ID. It converts currencyFrom into currencyTo according current rate. It " +
         "decrements wallet from which payment is outgoing and increment wallet to which payment is incoming (if currency exist in wallet - given " +
         "amount increments the previous one, if does not exist - it creates new one with given amount).")
-    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist")
+    @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist.")
     @ApiResponse(responseCode = "422", description = "When:<ul>" +
         "<li>currency or cryptocurrency is not supported</li>" +
         "<li>wallet does not have specified currency</li>" +

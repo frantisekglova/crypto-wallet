@@ -23,6 +23,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Entity
 @Table
+// TODO add @Validation here and in Wallet (https://www.baeldung.com/spring-boot-bean-validation)
 public class Wallet {
 
     // TODO use org.hibernate.id.UUIDGenerator (https://thorben-janssen.com/generate-uuids-primary-keys-hibernate/)

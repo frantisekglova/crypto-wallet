@@ -1,4 +1,4 @@
-package sk.glova.cryptowallet.services;
+package sk.glova.cryptowallet.services.impl;
 
 import static sk.glova.cryptowallet.utils.Helper.getStringFromEnums;
 
@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate;
 import sk.glova.cryptowallet.domain.CryptoCurrencyCode;
 import sk.glova.cryptowallet.domain.CurrencyCode;
 import sk.glova.cryptowallet.domain.model.CryptoCurrencyRate;
+import sk.glova.cryptowallet.services.api.RateService;
 
 @Service
 @RequiredArgsConstructor

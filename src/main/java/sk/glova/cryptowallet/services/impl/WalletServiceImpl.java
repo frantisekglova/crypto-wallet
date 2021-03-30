@@ -1,4 +1,4 @@
-package sk.glova.cryptowallet.services;
+package sk.glova.cryptowallet.services.impl;
 
 import java.math.BigDecimal;
 import java.util.EnumSet;
@@ -23,6 +23,7 @@ import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
 import sk.glova.cryptowallet.exception.EntityNotFoundException;
 import sk.glova.cryptowallet.exception.OperationNotAllowedException;
+import sk.glova.cryptowallet.services.api.WalletService;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +36,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public Wallet createWallet(UpsertWalletRequest request) {
+    public Wallet createWallet(UpsertWalletRequest request) throws OperationNotAllowedException {
         // this isn't necessary, but this use-case dont have owner in wallet, so name should be unique
         checkName(request.getName());
 
@@ -49,7 +50,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void updateWallet(Long walletId, UpsertWalletRequest request) {
+    public void updateWallet(Long walletId, UpsertWalletRequest request) throws OperationNotAllowedException, EntityNotFoundException {
         final Wallet wallet = findByIdOrThrow(walletId);
         final String name = request.getName();
 
@@ -60,13 +61,13 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(readOnly = true)
-    public Wallet getWallet(Long walletId) {
+    public Wallet getWallet(Long walletId) throws EntityNotFoundException {
         return findByIdOrThrow(walletId);
     }
 
     @Override
     @Transactional
-    public void deleteWallet(Long walletId) {
+    public void deleteWallet(Long walletId) throws EntityNotFoundException {
         checkWalletExist(walletId);
 
         walletRepository.deleteById(walletId);
@@ -74,7 +75,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void add(Long walletId, AddRequest addRequest) {
+    public void add(Long walletId, AddRequest addRequest) throws OperationNotAllowedException, EntityNotFoundException {
         final Wallet wallet = findByIdOrThrow(walletId);
 
         final String walletCurrency = sanitizeCurrency(addRequest.getCurrencyTo());
@@ -91,7 +92,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional
-    public void transfer(Long walletId, TransferRequest transferRequest) {
+    public void transfer(Long walletId, TransferRequest transferRequest) throws OperationNotAllowedException, EntityNotFoundException {
         // check whether both Wallets exists
         final Wallet walletFrom = findByIdOrThrow(walletId);
         final Wallet walletTo = findByIdOrThrow(transferRequest.getDestinationWalletId());
@@ -154,13 +155,13 @@ public class WalletServiceImpl implements WalletService {
         }
     }
 
-    private void checkWalletExist(Long walletId) {
+    private void checkWalletExist(Long walletId) throws EntityNotFoundException {
         if (!walletRepository.existsById(walletId)) {
-            throw new EntityNotFoundException("Wallet with given ID does not exist");
+            throw new EntityNotFoundException("Wallet with given ID does not exist.");
         }
     }
 
-    private void checkName(String name) {
+    private void checkName(String name) throws OperationNotAllowedException {
         if (name == null || name.length() == 0) {
             throw new OperationNotAllowedException("Provided name was null or empty string.");
         }
@@ -169,7 +170,7 @@ public class WalletServiceImpl implements WalletService {
         }
     }
 
-    private <E extends Enum<E>> void checkCurrency(String currency, Class<E> clazz) {
+    private <E extends Enum<E>> void checkCurrency(String currency, Class<E> clazz) throws OperationNotAllowedException {
         String sanitizedCurrency = sanitizeCurrency(currency);
 
         final boolean isNotSupported = EnumSet.allOf(clazz)
@@ -186,12 +187,12 @@ public class WalletServiceImpl implements WalletService {
         return currency.toUpperCase();
     }
 
-    private Wallet findByIdOrThrow(Long walletId) {
+    private Wallet findByIdOrThrow(Long walletId) throws EntityNotFoundException {
         return walletRepository.findById(walletId)
-            .orElseThrow(() -> new EntityNotFoundException("Wallet with given ID does not exist"));
+            .orElseThrow(() -> new EntityNotFoundException("Wallet with given ID does not exist."));
     }
 
-    private void checkNewName(String newValue, String oldValue) {
+    private void checkNewName(String newValue, String oldValue) throws OperationNotAllowedException {
         if (Objects.equals(newValue, oldValue)) {
             throw new OperationNotAllowedException("Provided name is the same as it was.");
         }
