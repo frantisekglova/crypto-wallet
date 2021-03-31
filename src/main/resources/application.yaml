@@ -25,3 +25,7 @@ external:
   api:
     multi-url: https://min-api.cryptocompare.com/data/pricemulti?fsyms={fsyms}&tsyms={tsyms}
     single-url: https://min-api.cryptocompare.com/data/price?fsym={fsym}&tsyms={tsyms}
+
+java:
+  runtime:
+    version: 11
