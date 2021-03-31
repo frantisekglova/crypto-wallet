@@ -83,8 +83,8 @@ public class WalletServiceImpl implements WalletService {
     public void add(Long walletId, AddRequest addRequest) throws OperationNotAllowedException, EntityNotFoundException {
         final Wallet wallet = findByIdOrThrow(walletId);
 
-        final String walletCurrency = sanitizeCurrency(addRequest.getCurrencyTo());
-        final String inputCurrency = sanitizeCurrency(addRequest.getCurrencyFrom());
+        final String walletCurrency = sanitizeCurrency(addRequest.getCryptoCurrencyTo());
+        final String inputCurrency = sanitizeCurrency(addRequest.getFiatCurrencyFrom());
 
         checkCurrency(walletCurrency, currencyService.getAllSupportedCryptoCurrencies());
         checkCurrency(inputCurrency, currencyService.getAllSupportedCurrencies());
@@ -102,8 +102,8 @@ public class WalletServiceImpl implements WalletService {
         final Wallet walletFrom = findByIdOrThrow(walletId);
         final Wallet walletTo = findByIdOrThrow(transferRequest.getDestinationWalletId());
 
-        final String currencyFrom = sanitizeCurrency(transferRequest.getCurrencyFrom());
-        final String currencyTo = sanitizeCurrency(transferRequest.getCurrencyTo());
+        final String currencyFrom = sanitizeCurrency(transferRequest.getCryptoCurrencyFrom());
+        final String currencyTo = sanitizeCurrency(transferRequest.getCryptoCurrencyTo());
 
         // check whether there are specified supported currencies
         checkCurrency(currencyTo, currencyService.getAllSupportedCryptoCurrencies());

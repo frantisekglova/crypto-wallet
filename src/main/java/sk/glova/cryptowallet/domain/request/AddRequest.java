@@ -10,8 +10,8 @@ import lombok.Setter;
 @Builder
 public class AddRequest {
 
-    private String currencyFrom;
-    private String currencyTo;
+    private String fiatCurrencyFrom;
+    private String cryptoCurrencyTo;
     private BigDecimal amount;
 
 }

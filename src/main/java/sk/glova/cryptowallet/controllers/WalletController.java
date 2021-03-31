@@ -27,6 +27,7 @@ import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
 import sk.glova.cryptowallet.services.impl.WalletServiceImpl;
 
+// TODO add endpoint for withdraws crypto currency from wallet into fiat currency (opposite of add endpoint)
 @RestController
 @RequestMapping(value = "rest/v1/wallet", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
@@ -86,8 +87,8 @@ public class WalletController {
         return wallet;
     }
 
-    @Operation(description = "Adds currency to wallet with given ID. It converts currencyFrom into currencyTo according current rate (if currency " +
-        "exist in wallet - given amount increments the previous one, if does not exist - it creates new one with given amount).")
+    @Operation(description = "Adds crypto currency to wallet with given ID. It converts fiat currency into crypto currency according current rate " +
+        "(if crypto currency exist in wallet - given amount increments the previous one, if does not exist - it creates new one with given amount).")
     @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist.")
     @ApiResponse(responseCode = "422", description = "When currency or cryptocurrency is not supported.")
     @ResponseStatus(OK)
@@ -100,9 +101,9 @@ public class WalletController {
         return service.getWallet(walletId);
     }
 
-    @Operation(description = "Transfers currency from wallet with given ID. It converts currencyFrom into currencyTo according current rate. It " +
-        "decrements wallet from which payment is outgoing and increment wallet to which payment is incoming (if currency exist in wallet - given " +
-        "amount increments the previous one, if does not exist - it creates new one with given amount).")
+    @Operation(description = "Transfers crypto currency from wallet with given ID. It converts from one crypto currency into another according " +
+        "current rate. It decrements wallet from which payment is outgoing and increment wallet to which payment is incoming (if currency exist in" +
+        " wallet - given amount increments the previous one, if does not exist - it creates new one with given amount).")
     @ApiResponse(responseCode = "404", description = "When wallet with given ID does not exist.")
     @ApiResponse(responseCode = "422", description = "When:<ul>" +
         "<li>currency or cryptocurrency is not supported</li>" +

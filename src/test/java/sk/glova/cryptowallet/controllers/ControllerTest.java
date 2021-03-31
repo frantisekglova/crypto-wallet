@@ -59,9 +59,9 @@ public abstract class ControllerTest {
 
     protected TransferRequest getTransferRequest(Long walletId2, String currencyFrom, BigDecimal amount) {
         return TransferRequest.builder()
-            .currencyFrom(currencyFrom)
+            .cryptoCurrencyFrom(currencyFrom)
             .amount(amount)
-            .currencyTo(TRANSFER_TO_CUR)
+            .cryptoCurrencyTo(TRANSFER_TO_CUR)
             .destinationWalletId(walletId2)
             .build();
     }
@@ -72,17 +72,17 @@ public abstract class ControllerTest {
 
     protected AddRequest getAddRequest(String currencyFrom) {
         return AddRequest.builder()
-            .currencyFrom(currencyFrom)
+            .fiatCurrencyFrom(currencyFrom)
             .amount(DEFAULT_AMOUNT)
-            .currencyTo(ADD_TO_CUR)
+            .cryptoCurrencyTo(ADD_TO_CUR)
             .build();
     }
 
     protected void addIntoWallet(Long walletId1) throws Exception {
         final AddRequest addRequest = AddRequest.builder()
-            .currencyFrom(ADD_FROM_CUR)
+            .fiatCurrencyFrom(ADD_FROM_CUR)
             .amount(DEFAULT_AMOUNT)
-            .currencyTo(ADD_TO_CUR)
+            .cryptoCurrencyTo(ADD_TO_CUR)
             .build();
 
         call(POST, WALLET_URL + walletId1 + ADD, addRequest);
