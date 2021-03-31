@@ -1,7 +1,6 @@
 package sk.glova.cryptowallet.services.impl;
 
 import static org.springframework.http.HttpMethod.GET;
-import static sk.glova.cryptowallet.utils.Helper.getStringFromEnums;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -16,9 +15,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import sk.glova.cryptowallet.domain.CryptoCurrencyCode;
-import sk.glova.cryptowallet.domain.CurrencyCode;
 import sk.glova.cryptowallet.domain.model.CryptoCurrencyRate;
+import sk.glova.cryptowallet.domain.model.SupportedCurrency;
+import sk.glova.cryptowallet.services.api.CurrencyService;
 import sk.glova.cryptowallet.services.api.RateService;
 
 @Service
@@ -26,6 +25,8 @@ import sk.glova.cryptowallet.services.api.RateService;
 public class RateServiceImpl implements RateService {
 
     private final RestTemplate restTemplate;
+    private final CurrencyService currencyService;
+
     @Value("${external.api.multi-url}")
     private String url;
 
@@ -50,8 +51,15 @@ public class RateServiceImpl implements RateService {
     }
 
     private Map<String, Map<String, BigDecimal>> getMapFromApi() {
-        final String fsyms = getStringFromEnums(CryptoCurrencyCode.class, ",");
-        final String tsyms = getStringFromEnums(CurrencyCode.class, ",");
+        final String fsyms = currencyService.getAllSupportedCryptoCurrencies()
+            .stream()
+            .map(SupportedCurrency::getCode)
+            .collect(Collectors.joining(","));
+
+        final String tsyms = currencyService.getAllSupportedCurrencies()
+            .stream()
+            .map(SupportedCurrency::getCode)
+            .collect(Collectors.joining(","));
 
         return restTemplate
             .exchange(url, GET, null, new ParameterizedTypeReference<Map<String, Map<String, BigDecimal>>>() {}, fsyms, tsyms)

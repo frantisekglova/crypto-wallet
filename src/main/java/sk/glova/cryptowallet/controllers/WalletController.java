@@ -2,7 +2,7 @@ package sk.glova.cryptowallet.controllers;
 
 import static org.springframework.http.HttpStatus.CREATED;
 import static org.springframework.http.HttpStatus.OK;
-import static sk.glova.cryptowallet.utils.Helper.getCurrentLocationWithId;
+import static sk.glova.cryptowallet.utils.ControllerUtils.getCurrentLocationWithId;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

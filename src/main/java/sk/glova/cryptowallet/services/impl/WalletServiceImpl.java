@@ -3,8 +3,8 @@ package sk.glova.cryptowallet.services.impl;
 import static org.springframework.http.HttpMethod.GET;
 
 import java.math.BigDecimal;
-import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -17,15 +17,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 import sk.glova.cryptowallet.dao.WalletRepository;
-import sk.glova.cryptowallet.domain.CryptoCurrencyCode;
-import sk.glova.cryptowallet.domain.CurrencyCode;
 import sk.glova.cryptowallet.domain.model.Currency;
+import sk.glova.cryptowallet.domain.model.SupportedCurrency;
 import sk.glova.cryptowallet.domain.model.Wallet;
 import sk.glova.cryptowallet.domain.request.AddRequest;
 import sk.glova.cryptowallet.domain.request.TransferRequest;
 import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
 import sk.glova.cryptowallet.exception.EntityNotFoundException;
 import sk.glova.cryptowallet.exception.OperationNotAllowedException;
+import sk.glova.cryptowallet.services.api.CurrencyService;
 import sk.glova.cryptowallet.services.api.WalletService;
 
 @Service
@@ -34,6 +34,8 @@ public class WalletServiceImpl implements WalletService {
 
     private final RestTemplate restTemplate;
     private final WalletRepository walletRepository;
+    private final CurrencyService currencyService;
+
     @Value("${external.api.single-url}")
     private String url;
 
@@ -84,8 +86,8 @@ public class WalletServiceImpl implements WalletService {
         final String walletCurrency = sanitizeCurrency(addRequest.getCurrencyTo());
         final String inputCurrency = sanitizeCurrency(addRequest.getCurrencyFrom());
 
-        checkCurrency(walletCurrency, CryptoCurrencyCode.class);
-        checkCurrency(inputCurrency, CurrencyCode.class);
+        checkCurrency(walletCurrency, currencyService.getAllSupportedCryptoCurrencies());
+        checkCurrency(inputCurrency, currencyService.getAllSupportedCurrencies());
 
         final BigDecimal rate = getConversionRate(inputCurrency, walletCurrency);
         final BigDecimal addition = addRequest.getAmount().multiply(rate);
@@ -104,8 +106,8 @@ public class WalletServiceImpl implements WalletService {
         final String currencyTo = sanitizeCurrency(transferRequest.getCurrencyTo());
 
         // check whether there are specified supported currencies
-        checkCurrency(currencyTo, CryptoCurrencyCode.class);
-        checkCurrency(currencyFrom, CryptoCurrencyCode.class);
+        checkCurrency(currencyTo, currencyService.getAllSupportedCryptoCurrencies());
+        checkCurrency(currencyFrom, currencyService.getAllSupportedCryptoCurrencies());
 
         // check whether Wallet has open Account with specified currency
         final Currency currency = walletFrom.getCurrencies().stream()
@@ -173,13 +175,12 @@ public class WalletServiceImpl implements WalletService {
         }
     }
 
-    private <E extends Enum<E>> void checkCurrency(String currency, Class<E> clazz) throws OperationNotAllowedException {
-        String sanitizedCurrency = sanitizeCurrency(currency);
+    private void checkCurrency(String currency, List<SupportedCurrency> currencies) throws OperationNotAllowedException {
+        final String sanitizedCurrency = sanitizeCurrency(currency);
 
-        final boolean isNotSupported = EnumSet.allOf(clazz)
+        final boolean isNotSupported = currencies
             .stream()
-            .map(Enum::toString)
-            .noneMatch(curr -> curr.equals(sanitizedCurrency));
+            .noneMatch(curr -> curr.getCode().equals(sanitizedCurrency));
 
         if (isNotSupported) {
             throw new OperationNotAllowedException("Currency [" + sanitizedCurrency + "] is not supported.");

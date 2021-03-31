@@ -10,7 +10,7 @@ import sk.glova.cryptowallet.domain.request.UpsertWalletRequest;
 import sk.glova.cryptowallet.exception.EntityNotFoundException;
 import sk.glova.cryptowallet.exception.OperationNotAllowedException;
 
-//TODO add @NotNull @Positive javax.validation
+//TODO add @NotNull @Positive javax.validation annotations
 public interface WalletService {
 
     /**
