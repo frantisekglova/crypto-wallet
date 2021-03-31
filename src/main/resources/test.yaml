@@ -16,11 +16,6 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     show-sql: true
 
-  h2:
-    console:
-      enabled: true
-      path: /h2
-
 external:
   api:
     multi-url: https://min-api.cryptocompare.com/data/pricemulti?fsyms={fsyms}&tsyms={tsyms}
