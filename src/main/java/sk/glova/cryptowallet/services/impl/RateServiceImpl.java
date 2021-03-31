@@ -1,5 +1,6 @@
 package sk.glova.cryptowallet.services.impl;
 
+import static org.springframework.http.HttpMethod.GET;
 import static sk.glova.cryptowallet.utils.Helper.getStringFromEnums;
 
 import java.math.BigDecimal;
@@ -8,6 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -48,15 +50,12 @@ public class RateServiceImpl implements RateService {
     }
 
     private Map<String, Map<String, BigDecimal>> getMapFromApi() {
-        final Object obj = restTemplate.getForObject(
-            url,
-            Object.class,
-            getStringFromEnums(CryptoCurrencyCode.class, ","),
-            getStringFromEnums(CurrencyCode.class, ",")
-        );
-        @SuppressWarnings("unchecked")
-        Map<String, Map<String, BigDecimal>> map = (Map<String, Map<String, BigDecimal>>) obj;
-        return map;
+        final String fsyms = getStringFromEnums(CryptoCurrencyCode.class, ",");
+        final String tsyms = getStringFromEnums(CurrencyCode.class, ",");
+
+        return restTemplate
+            .exchange(url, GET, null, new ParameterizedTypeReference<Map<String, Map<String, BigDecimal>>>() {}, fsyms, tsyms)
+            .getBody();
     }
 
     private List<CryptoCurrencyRate> transformToListOfRates(Map<String, Map<String, BigDecimal>> map) {

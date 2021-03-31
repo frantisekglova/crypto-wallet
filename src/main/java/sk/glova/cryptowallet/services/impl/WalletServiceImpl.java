@@ -1,5 +1,7 @@
 package sk.glova.cryptowallet.services.impl;
 
+import static org.springframework.http.HttpMethod.GET;
+
 import java.math.BigDecimal;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -8,6 +10,7 @@ import java.util.Objects;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -201,11 +204,10 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private BigDecimal getConversionRate(String fsym, String tsyms) {
-        final Object obj = restTemplate.getForObject(url, Object.class, fsym, tsyms);
-        @SuppressWarnings("unchecked") // JDK 8 does not support parameterized types
-        final Map<String, Double> map = (Map<String, Double>) obj;
-        assert map != null;
-        return BigDecimal.valueOf(map.get(tsyms));
+        return Objects.requireNonNull(restTemplate
+            .exchange(url, GET, null, new ParameterizedTypeReference<Map<String, BigDecimal>>() {}, fsym, tsyms)
+            .getBody())
+            .get(tsyms);
     }
 
 }
