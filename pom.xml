@@ -10,9 +10,9 @@
   </parent>
   <groupId>sk.glova</groupId>
   <artifactId>crypto-wallet</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.0-SNAPSHOT</version>
   <name>crypto-wallet</name>
-  <description>App crypto currency wallet</description>
+  <description>Crypto-currency wallet simulator</description>
   <properties>
     <java.version>11</java.version>
     <springdoc.version>1.5.2</springdoc.version>

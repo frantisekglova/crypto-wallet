@@ -6,13 +6,13 @@ within the wallet and among the wallets.
 ## Technologies
 
 - Apache Maven 3.6.3
-- Java 8 (AdoptOpenJDK)
+- Java 11 (AdoptOpenJDK)
 - Spring Boot 2.4.4
 - Lombok (to unclutter the code)
 - H2 (in memory DB)
 - Swagger (UI for Rest API)
 
-## How to run locally
+## How to clone app
 
 Go to folder where you want to clone app from a repository:
 
@@ -32,8 +32,11 @@ Change application.yaml server port property to set port you wish application ru
 server:
   port: 8080
 ```
+### Run tests:
 
-You can continue with two option: 
+```
+mvn clean test
+```
 
 ### Run installed app:
 
